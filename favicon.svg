@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ASCII Glitch">
+  <rect width="64" height="64" fill="#050805"/>
+  <text x="8" y="40" font-family="monospace" font-size="28" fill="#1aff6a">A/</text>
+  <rect x="40" y="18" width="14" height="28" fill="#ff2bd6" opacity="0.85"/>
+  <rect x="44" y="14" width="14" height="28" fill="#2bfff2" opacity="0.7"/>
+</svg>

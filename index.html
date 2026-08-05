@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="ASCII и Glitch фильтр веб-камеры в реальном времени. Запись WebM и GIF." />
+    <meta name="theme-color" content="#050805" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>ASCII / Glitch — видеофильтр</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Unbounded:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#основной-контент">Перейти к содержимому</a>
+
+    <div id="приложение" class="приложение">
+      <header class="шапка">
+        <p class="бренд" id="бренд">ASCII / GLITCH</p>
+        <h1 class="заголовок">Видеофильтр</h1>
+        <p class="подзаголовок">Свайп влево — Матрица. Свайп вправо — Киберпанк.</p>
+      </header>
+
+      <main id="основной-контент" class="сцена" tabindex="-1">
+        <section
+          class="холст-обёртка"
+          id="зона-свайпа"
+          aria-label="Область предпросмотра фильтра"
+          role="application"
+        >
+          <video id="видео-источник" class="скрытый" playsinline muted autoplay aria-hidden="true"></video>
+          <canvas id="холст-вывода" class="холст" width="640" height="480" role="img" aria-label="Обработанное видео"></canvas>
+          <div class="режим-бейдж" id="бейдж-режима" aria-live="polite">Матрица</div>
+          <div class="подсказка-свайп" id="подсказка-свайп" aria-hidden="true">
+            <span>← Матрица</span>
+            <span>Глитч →</span>
+          </div>
+        </section>
+
+        <section class="панель" aria-label="Панель управления">
+          <div class="группа-кнопок">
+            <button type="button" id="кнопка-камера" class="кнопка кнопка--основная" aria-label="Включить камеру">
+              Включить камеру
+            </button>
+            <button type="button" id="кнопка-стоп" class="кнопка" aria-label="Остановить камеру" disabled>
+              Стоп
+            </button>
+          </div>
+
+          <fieldset class="переключатель-режима">
+            <legend>Режим фильтра</legend>
+            <div class="сегменты" role="radiogroup" aria-label="Выбор режима фильтра">
+              <button
+                type="button"
+                class="сегмент сегмент--активный"
+                id="режим-ascii"
+                role="radio"
+                aria-checked="true"
+                data-режим="ascii"
+              >
+                Матрица
+              </button>
+              <button
+                type="button"
+                class="сегмент"
+                id="режим-glitch"
+                role="radio"
+                aria-checked="false"
+                data-режим="glitch"
+              >
+                Глитч
+              </button>
+            </div>
+          </fieldset>
+
+          <div class="поле">
+            <label for="сила-эффекта">Сила эффекта: <span id="сила-значение">50</span>%</label>
+            <input
+              type="range"
+              id="сила-эффекта"
+              min="0"
+              max="100"
+              value="50"
+              step="1"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              aria-label="Сила эффекта фильтра"
+            />
+          </div>
+
+          <div class="поле">
+            <label for="формат-записи">Формат записи</label>
+            <select id="формат-записи" aria-label="Формат записи">
+              <option value="webm">Видеопетля</option>
+              <option value="gif">Гифка</option>
+            </select>
+          </div>
+
+          <div class="группа-кнопок">
+            <button type="button" id="кнопка-запись" class="кнопка кнопка--запись" aria-label="Начать запись" disabled>
+              Записать
+            </button>
+            <button type="button" id="кнопка-скачать" class="кнопка" aria-label="Скачать запись" disabled>
+              Скачать
+            </button>
+          </div>
+
+          <p class="статус" id="статус" role="status" aria-live="polite">Камера не подключена</p>
+        </section>
+      </main>
+
+      <div id="тост" class="тост" role="alert" aria-live="assertive" hidden></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,433 @@
+/* Переменные темы — матрица / киберпанк */
+:root {
+  --фон: #050805;
+  --фон-градиент: radial-gradient(ellipse 120% 80% at 50% -20%, #0d2818 0%, #050805 55%, #020403 100%);
+  --зелёный: #1aff6a;
+  --зелёный-тусклый: #0a8f3c;
+  --магента: #ff2bd6;
+  --циан: #2bfff2;
+  --текст: #d8ffe8;
+  --текст-вторичный: #7aab8c;
+  --опасность: #ff4d6a;
+  --успех: #1aff6a;
+  --рамка: rgba(26, 255, 106, 0.25);
+  --панель: rgba(8, 20, 12, 0.85);
+  --шрифт-дисплей: 'Unbounded', system-ui, sans-serif;
+  --шрифт-моно: 'IBM Plex Mono', ui-monospace, monospace;
+  --радиус: 4px;
+  --тень-свечения: 0 0 24px rgba(26, 255, 106, 0.15);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--шрифт-моно);
+  color: var(--текст);
+  background: var(--фон);
+  background-image: var(--фон-градиент);
+  background-attachment: fixed;
+  line-height: 1.45;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--зелёный);
+  color: #000;
+  padding: 0.5rem 1rem;
+  z-index: 1000;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+.скрытый {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.приложение {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 1rem 0.75rem calc(1.5rem + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Шапка — бренд как главный сигнал */
+.шапка {
+  text-align: center;
+  padding: 0.5rem 0 0;
+}
+
+.бренд {
+  margin: 0;
+  font-family: var(--шрифт-дисплей);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  letter-spacing: 0.04em;
+  color: var(--зелёный);
+  text-shadow: 0 0 20px rgba(26, 255, 106, 0.45);
+  animation: пульс-бренда 3.2s ease-in-out infinite;
+}
+
+.заголовок {
+  margin: 0.35rem 0 0;
+  font-family: var(--шрифт-дисплей);
+  font-size: clamp(0.95rem, 3.5vw, 1.15rem);
+  font-weight: 500;
+  color: var(--текст);
+}
+
+.подзаголовок {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--текст-вторичный);
+}
+
+@keyframes пульс-бренда {
+  0%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.88;
+    filter: brightness(1.15);
+  }
+}
+
+.сцена {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.холст-обёртка {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 1px solid var(--рамка);
+  box-shadow: var(--тень-свечения);
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.холст-обёртка:active {
+  cursor: grabbing;
+}
+
+.зона--матрица {
+  border-color: rgba(26, 255, 106, 0.4);
+  box-shadow: 0 0 28px rgba(26, 255, 106, 0.2);
+}
+
+.зона--глитч {
+  border-color: rgba(255, 43, 214, 0.45);
+  box-shadow: 0 0 28px rgba(43, 255, 242, 0.18);
+}
+
+.холст {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.режим-бейдж {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid var(--рамка);
+  color: var(--зелёный);
+  pointer-events: none;
+  animation: появление 0.4s ease;
+}
+
+.зона--глитч .режим-бейдж {
+  color: var(--циан);
+  border-color: rgba(255, 43, 214, 0.4);
+}
+
+.подсказка-свайп {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.75rem;
+  font-size: 0.65rem;
+  color: rgba(216, 255, 232, 0.55);
+  pointer-events: none;
+  animation: мигание 2.4s ease-in-out infinite;
+}
+
+@keyframes появление {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes мигание {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.панель {
+  background: var(--панель);
+  border: 1px solid var(--рамка);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  backdrop-filter: blur(8px);
+}
+
+.группа-кнопок {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.кнопка {
+  appearance: none;
+  border: 1px solid var(--рамка);
+  background: transparent;
+  color: var(--текст);
+  font-family: var(--шрифт-моно);
+  font-size: 0.85rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: var(--радиус);
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.кнопка:hover:not(:disabled) {
+  border-color: var(--зелёный);
+  color: var(--зелёный);
+}
+
+.кнопка:focus-visible {
+  outline: 2px solid var(--зелёный);
+  outline-offset: 2px;
+}
+
+.кнопка:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.кнопка--основная {
+  background: var(--зелёный);
+  color: #031208;
+  border-color: var(--зелёный);
+  font-weight: 600;
+}
+
+.кнопка--основная:hover:not(:disabled) {
+  background: #6dff9d;
+  color: #031208;
+}
+
+.кнопка--запись {
+  border-color: rgba(255, 43, 214, 0.5);
+}
+
+.кнопка--запись:hover:not(:disabled) {
+  border-color: var(--магента);
+  color: var(--магента);
+}
+
+.переключатель-режима {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.переключатель-режима legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--текст-вторичный);
+}
+
+.сегменты {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.сегмент {
+  appearance: none;
+  border: 1px solid var(--рамка);
+  background: transparent;
+  color: var(--текст-вторичный);
+  font-family: var(--шрифт-моно);
+  font-size: 0.85rem;
+  padding: 0.65rem;
+  min-height: 44px;
+  cursor: pointer;
+  border-radius: var(--радиус);
+}
+
+.сегмент--активный {
+  color: #031208;
+  background: var(--зелёный);
+  border-color: var(--зелёный);
+  font-weight: 600;
+}
+
+#режим-glitch.сегмент--активный {
+  background: linear-gradient(90deg, var(--магента), var(--циан));
+  border-color: transparent;
+  color: #0a0610;
+}
+
+.сегмент:focus-visible {
+  outline: 2px solid var(--зелёный);
+  outline-offset: 2px;
+}
+
+.поле {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.поле label {
+  font-size: 0.8rem;
+  color: var(--текст-вторичный);
+}
+
+.поле input[type='range'] {
+  width: 100%;
+  accent-color: var(--зелёный);
+  height: 1.5rem;
+}
+
+.поле select {
+  appearance: none;
+  background: #0a140e;
+  color: var(--текст);
+  border: 1px solid var(--рамка);
+  border-radius: var(--радиус);
+  padding: 0.65rem 0.75rem;
+  font-family: var(--шрифт-моно);
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.поле select:focus-visible {
+  outline: 2px solid var(--зелёный);
+  outline-offset: 2px;
+}
+
+.статус {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--текст-вторичный);
+  min-height: 1.2em;
+}
+
+.тост {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + var(--safe-bottom));
+  transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 0.75rem 1rem;
+  background: #0c1a12;
+  border: 1px solid var(--рамка);
+  color: var(--текст);
+  font-size: 0.85rem;
+  z-index: 50;
+  box-shadow: var(--тень-свечения);
+}
+
+.тост--ошибка {
+  border-color: var(--опасность);
+  color: #ffd0d8;
+}
+
+.тост--успех {
+  border-color: var(--успех);
+}
+
+.тост--инфо {
+  border-color: var(--циан);
+}
+
+/* Планшет */
+@media (min-width: 768px) {
+  .приложение {
+    padding: 1.5rem 1.25rem 2rem;
+    gap: 1.25rem;
+  }
+
+  .панель {
+    padding: 1.25rem;
+  }
+
+  .подзаголовок {
+    font-size: 0.9rem;
+  }
+}
+
+/* Десктоп */
+@media (min-width: 1440px) {
+  .приложение {
+    width: min(100%, 880px);
+    padding-top: 2rem;
+  }
+
+  .холст-обёртка {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .бренд,
+  .подсказка-свайп,
+  .режим-бейдж {
+    animation: none;
+  }
+}

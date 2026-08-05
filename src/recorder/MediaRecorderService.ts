@@ -1,12 +1,20 @@
 import { кодироватьGif, type КадрGif } from './GifEncoder';
 import { ОшибкаПриложения, сообщениеОшибкиЗаписи } from '../utils/errors';
 import { логгер } from '../utils/logger';
+import { обрезатьВКвадрат } from '../utils/square';
 import type { ФорматЗаписи, СостояниеЗаписи } from '../types';
 
-const ДЛИТЕЛЬНОСТЬ_МС = 3000;
+const ДЛИТЕЛЬНОСТЬ_ПЕТЛИ_МС = 3000;
+const ДЛИТЕЛЬНОСТЬ_СТИКЕРА_МС = 2000;
+const СТОРОНА_СТИКЕРА = 480;
+
+export interface ОпцииЗаписи {
+  фотобудка?: boolean;
+}
 
 /**
  * Запись короткой петли: WebM через MediaRecorder или GIF через захват кадров.
+ * В режиме «Фотобудка» — квадратный стикер 1:1.
  */
 export class СервисЗаписи {
   private рекордер: MediaRecorder | null = null;
@@ -17,6 +25,7 @@ export class СервисЗаписи {
   private _состояние: СостояниеЗаписи = 'ожидание';
   private _результат: Blob | null = null;
   private _формат: ФорматЗаписи = 'webm';
+  private _фотобудка = false;
 
   get состояние(): СостояниеЗаписи {
     return this._состояние;
@@ -30,6 +39,10 @@ export class СервисЗаписи {
     return this._формат;
   }
 
+  get фотобудка(): boolean {
+    return this._фотобудка;
+  }
+
   /**
    * Начать запись с холста.
    * Для WebM — захват потока холста; для GIF — сэмплирование ImageData.
@@ -38,19 +51,21 @@ export class СервисЗаписи {
     холст: HTMLCanvasElement,
     формат: ФорматЗаписи,
     получитьКадр: () => ImageData | null,
+    опции: ОпцииЗаписи = {},
   ): Promise<void> {
     if (this._состояние === 'запись') {
       throw new ОшибкаПриложения('запись-идёт', 'Запись уже идёт.');
     }
 
-    this._формат = формат;
+    this._фотобудка = Boolean(опции.фотобудка);
+    this._формат = this._фотобудка ? 'gif' : формат;
     this._результат = null;
     this.куски = [];
     this.кадрыGif = [];
     this._состояние = 'запись';
 
     try {
-      if (формат === 'webm') {
+      if (this._формат === 'webm') {
         await this.записатьWebm(холст);
       } else {
         await this.записатьGif(получитьКадр);
@@ -63,12 +78,15 @@ export class СервисЗаписи {
     }
   }
 
-  /** Принудительная остановка */
   остановить(): void {
     if (this.рекордер && this.рекордер.state !== 'inactive') {
       this.рекордер.stop();
     }
     this.очиститьТаймеры();
+  }
+
+  private длительность(): number {
+    return this._фотобудка ? ДЛИТЕЛЬНОСТЬ_СТИКЕРА_МС : ДЛИТЕЛЬНОСТЬ_ПЕТЛИ_МС;
   }
 
   private очиститьТаймеры(): void {
@@ -92,7 +110,7 @@ export class СервисЗаписи {
     if (!mime) {
       throw new ОшибкаПриложения(
         'формат-webm',
-        'Запись WebM не поддерживается. Выберите формат GIF.',
+        'Запись WebM не поддерживается. Выберите формат «Гифка».',
       );
     }
 
@@ -107,13 +125,12 @@ export class СервисЗаписи {
         reject(new ОшибкаПриложения('запись-webm', 'Сбой MediaRecorder.'));
       };
       this.рекордер!.onstop = () => {
-        const blob = new Blob(this.куски, { type: mime });
-        resolve(blob);
+        resolve(new Blob(this.куски, { type: mime }));
       };
     });
 
     this.рекордер.start(200);
-    await ждать(ДЛИТЕЛЬНОСТЬ_МС);
+    await ждать(this.длительность());
     if (this.рекордер.state !== 'inactive') {
       this.рекордер.stop();
     }
@@ -124,26 +141,33 @@ export class СервисЗаписи {
   }
 
   private async записатьGif(получитьКадр: () => ImageData | null): Promise<void> {
+    const длительность = this.длительность();
+    const фотобудка = this._фотобудка;
+
     const готово = new Promise<Blob>((resolve, reject) => {
       const старт = Date.now();
       this.интервалGif = setInterval(() => {
         try {
           const кадр = получитьКадр();
           if (кадр) {
-            // Уменьшаем для лёгкого GIF
-            const уменьшенный = уменьшитьКадр(кадр, 240);
+            const подготовленный = фотобудка
+              ? обрезатьВКвадрат(кадр, СТОРОНА_СТИКЕРА)
+              : уменьшитьКадр(кадр, 240);
             this.кадрыGif.push({
-              данные: уменьшенный.data,
-              ширина: уменьшенный.width,
-              высота: уменьшенный.height,
-              задержкаСс: 10,
+              данные: подготовленный.data,
+              ширина: подготовленный.width,
+              высота: подготовленный.height,
+              задержкаСс: фотобудка ? 8 : 10,
             });
           }
-          if (Date.now() - старт >= ДЛИТЕЛЬНОСТЬ_МС) {
+          if (Date.now() - старт >= длительность) {
             this.очиститьТаймеры();
             try {
-              const blob = кодироватьGif(this.кадрыGif);
-              resolve(blob);
+              if (this.кадрыGif.length === 0) {
+                reject(new ОшибкаПриложения('нет-кадров', 'Не удалось захватить кадры для стикера.'));
+                return;
+              }
+              resolve(кодироватьGif(this.кадрыGif));
             } catch (e) {
               reject(e);
             }
@@ -152,21 +176,20 @@ export class СервисЗаписи {
           this.очиститьТаймеры();
           reject(e);
         }
-      }, 100);
+      }, фотобудка ? 80 : 100);
     });
 
     this._результат = await готово;
     this._состояние = 'готово';
-    логгер.инфо('GIF запись готова', { кадров: this.кадрыGif.length, размер: this._результат.size });
+    логгер.инфо(фотобудка ? 'Стикер готов' : 'GIF запись готова', {
+      кадров: this.кадрыGif.length,
+      размер: this._результат.size,
+    });
   }
 }
 
 function подобратьMimeWebm(): string | null {
-  const варианты = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ];
+  const варианты = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   for (const m of варианты) {
     if (MediaRecorder.isTypeSupported(m)) return m;
   }
@@ -177,7 +200,6 @@ function ждать(мс: number): Promise<void> {
   return new Promise((r) => setTimeout(r, мс));
 }
 
-/** Уменьшение кадра для GIF через временный canvas */
 function уменьшитьКадр(кадр: ImageData, максШирина: number): ImageData {
   if (кадр.width <= максШирина) {
     return new ImageData(new Uint8ClampedArray(кадр.data), кадр.width, кадр.height);
@@ -200,7 +222,6 @@ function уменьшитьКадр(кадр: ImageData, максШирина: n
   return ctx.getImageData(0, 0, w, h);
 }
 
-/** Скачать Blob как файл */
 export function скачатьBlob(blob: Blob, имяФайла: string): void {
   const url = URL.createObjectURL(blob);
   const ссылка = document.createElement('a');
@@ -212,3 +233,5 @@ export function скачатьBlob(blob: Blob, имяФайла: string): void {
   ссылка.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+export { СТОРОНА_СТИКЕРА, ДЛИТЕЛЬНОСТЬ_СТИКЕРА_МС };

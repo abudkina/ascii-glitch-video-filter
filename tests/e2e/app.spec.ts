@@ -21,11 +21,22 @@ test.describe('ASCII / Glitch — интерфейс', () => {
     await expect(page.locator('#бейдж-режима')).toHaveText('Матрица');
   });
 
-  test('ползунок силы эффекта обновляет значение', async ({ page }) => {
+  test('ползунок интенсивности эффектов обновляет значение', async ({ page }) => {
     const слайдер = page.locator('#сила-эффекта');
+    await expect(page.getByText(/Интенсивность эффектов/)).toBeVisible();
     await слайдер.fill('75');
     await expect(page.locator('#сила-значение')).toHaveText('75');
     await expect(слайдер).toHaveAttribute('aria-valuenow', '75');
+  });
+
+  test('фотобудка включает квадратный режим и кнопку Стикер', async ({ page }) => {
+    await expect(page.getByText(/Фотобудка/)).toBeVisible();
+    await page.locator('#фотобудка').check();
+    await expect(page.locator('#зона-свайпа')).toHaveClass(/зона--фотобудка/);
+    await expect(page.locator('#рамка-стикера')).toBeVisible();
+    await expect(page.locator('#формат-записи')).toBeDisabled();
+    await expect(page.locator('#формат-записи')).toHaveValue('gif');
+    await expect(page.getByRole('button', { name: 'Записать квадратный стикер' })).toBeVisible();
   });
 
   test('выбор формата записи', async ({ page }) => {

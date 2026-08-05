@@ -34,6 +34,7 @@
           <video id="видео-источник" class="скрытый" playsinline muted autoplay aria-hidden="true"></video>
           <canvas id="холст-вывода" class="холст" width="640" height="480" role="img" aria-label="Обработанное видео"></canvas>
           <div class="режим-бейдж" id="бейдж-режима" aria-live="polite">Матрица</div>
+          <div class="рамка-стикера" id="рамка-стикера" hidden aria-hidden="true"></div>
           <div class="подсказка-свайп" id="подсказка-свайп" aria-hidden="true">
             <span>← Матрица</span>
             <span>Глитч →</span>
@@ -77,7 +78,7 @@
           </fieldset>
 
           <div class="поле">
-            <label for="сила-эффекта">Сила эффекта: <span id="сила-значение">50</span>%</label>
+            <label for="сила-эффекта">Интенсивность эффектов: <span id="сила-значение">50</span>%</label>
             <input
               type="range"
               id="сила-эффекта"
@@ -88,8 +89,18 @@
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow="50"
-              aria-label="Сила эффекта фильтра"
+              aria-label="Интенсивность эффектов"
             />
+          </div>
+
+          <div class="поле поле--переключатель">
+            <label class="переключатель" for="фотобудка">
+              <input type="checkbox" id="фотобудка" aria-describedby="фотобудка-подсказка" />
+              <span class="переключатель__текст">Фотобудка — квадратные стикеры</span>
+            </label>
+            <p id="фотобудка-подсказка" class="подсказка-поля">
+              Кроп 1:1 и запись GIF-стикера (~2 сек, 480×480)
+            </p>
           </div>
 
           <div class="поле">

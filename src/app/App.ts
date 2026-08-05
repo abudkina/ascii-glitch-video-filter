@@ -5,11 +5,12 @@ import { привязатьСвайп } from '../ui/swipe';
 import { показатьТост } from '../ui/toast';
 import { загрузитьНастройки, сохранитьНастройки } from '../utils/storage';
 import { ограничить, ОшибкаПриложения } from '../utils/errors';
+import { обрезатьВКвадрат } from '../utils/square';
 import { логгер } from '../utils/logger';
 import type { РежимФильтра, ФорматЗаписи } from '../types';
 
 /**
- * Главное приложение: камера → фильтр → холст → запись.
+ * Главное приложение: камера → фильтр → холст → запись / фотобудка.
  */
 export class Приложение {
   private видео: HTMLVideoElement;
@@ -25,6 +26,7 @@ export class Приложение {
   private режим: РежимФильтра = 'ascii';
   private сила = 50;
   private формат: ФорматЗаписи = 'webm';
+  private фотобудка = false;
   private анимацияId = 0;
   private последнийКадр: ImageData | null = null;
   private снятьСвайп: (() => void) | null = null;
@@ -52,6 +54,7 @@ export class Приложение {
     this.режим = настройки.режим;
     this.сила = настройки.сила;
     this.формат = настройки.формат;
+    this.фотобудка = настройки.фотобудка;
 
     this.синхронизироватьUi();
     this.привязатьСобытия();
@@ -92,6 +95,22 @@ export class Приложение {
       this.сохранить();
     });
 
+    const фотобудка = mustEl('фотобудка', HTMLInputElement);
+    фотобудка.addEventListener('change', () => {
+      this.фотобудка = фотобудка.checked;
+      if (this.фотобудка) {
+        this.формат = 'gif';
+        mustEl('формат-записи', HTMLSelectElement).value = 'gif';
+        mustEl('формат-записи', HTMLSelectElement).disabled = true;
+        показатьТост('Фотобудка: квадратный GIF-стикер', 'инфо');
+      } else {
+        mustEl('формат-записи', HTMLSelectElement).disabled = false;
+      }
+      this.синхронизироватьUi();
+      this.сохранить();
+      this.обновитьКнопкуЗаписи();
+    });
+
     const формат = mustEl('формат-записи', HTMLSelectElement);
     формат.addEventListener('change', () => {
       const v = формат.value;
@@ -111,7 +130,6 @@ export class Приложение {
       this.скачать();
     });
 
-    // Клавиатура: стрелки для смены режима
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') this.установитьРежим('ascii');
       if (e.key === 'ArrowRight') this.установитьРежим('glitch');
@@ -123,6 +141,7 @@ export class Приложение {
       режим: this.режим,
       сила: this.сила,
       формат: this.формат,
+      фотобудка: this.фотобудка,
     });
   }
 
@@ -143,11 +162,39 @@ export class Приложение {
     слайдер.setAttribute('aria-valuenow', String(this.сила));
     mustEl('сила-значение', HTMLElement).textContent = String(this.сила);
 
-    mustEl('формат-записи', HTMLSelectElement).value = this.формат;
+    const чек = mustEl('фотобудка', HTMLInputElement);
+    чек.checked = this.фотобудка;
+
+    const селектФормат = mustEl('формат-записи', HTMLSelectElement);
+    if (this.фотобудка) {
+      this.формат = 'gif';
+      селектФормат.value = 'gif';
+      селектФормат.disabled = true;
+    } else {
+      селектФормат.disabled = false;
+      селектФормат.value = this.формат;
+    }
 
     const зона = mustEl('зона-свайпа', HTMLElement);
     зона.classList.toggle('зона--матрица', this.режим === 'ascii');
     зона.classList.toggle('зона--глитч', this.режим === 'glitch');
+    зона.classList.toggle('зона--фотобудка', this.фотобудка);
+
+    const рамка = mustEl('рамка-стикера', HTMLElement);
+    рамка.hidden = !this.фотобудка;
+    рамка.setAttribute('aria-hidden', String(!this.фотобудка));
+
+    this.обновитьКнопкуЗаписи();
+  }
+
+  private обновитьКнопкуЗаписи(): void {
+    const кнопка = mustEl('кнопка-запись', HTMLButtonElement);
+    if (this.идётЗапись) return;
+    кнопка.textContent = this.фотобудка ? 'Стикер' : 'Записать';
+    кнопка.setAttribute(
+      'aria-label',
+      this.фотобудка ? 'Записать квадратный стикер' : 'Начать запись',
+    );
   }
 
   установитьРежим(режим: РежимФильтра): void {
@@ -168,7 +215,11 @@ export class Приложение {
       mustEl('кнопка-камера', HTMLButtonElement).disabled = true;
       mustEl('кнопка-стоп', HTMLButtonElement).disabled = false;
       mustEl('кнопка-запись', HTMLButtonElement).disabled = false;
-      this.статус('Камера активна. Свайпайте по экрану для смены режима.');
+      this.статус(
+        this.фотобудка
+          ? 'Фотобудка активна. Лицо в квадрате — затем «Стикер».'
+          : 'Камера активна. Свайпайте по экрану для смены режима.',
+      );
       this.запуститьЦикл();
     } catch (ошибка) {
       const текст =
@@ -201,7 +252,6 @@ export class Приложение {
       const { ширина, высота } = this.камера.размеры();
       if (ширина === 0 || высота === 0) return;
 
-      // Масштаб для производительности на слабых устройствах
       const макс = window.innerWidth < 768 ? 320 : 480;
       const масштаб = Math.min(1, макс / ширина);
       const w = Math.max(1, Math.round(ширина * масштаб));
@@ -210,12 +260,19 @@ export class Приложение {
       if (this.буфер.width !== w || this.буфер.height !== h) {
         this.буфер.width = w;
         this.буфер.height = h;
-        this.холст.width = w;
-        this.холст.height = h;
       }
 
       this.буферCtx.drawImage(this.видео, 0, 0, w, h);
-      const исходные = this.буферCtx.getImageData(0, 0, w, h);
+      let исходные = this.буферCtx.getImageData(0, 0, w, h);
+
+      if (this.фотобудка) {
+        исходные = обрезатьВКвадрат(исходные);
+      }
+
+      if (this.холст.width !== исходные.width || this.холст.height !== исходные.height) {
+        this.холст.width = исходные.width;
+        this.холст.height = исходные.height;
+      }
 
       this.воркер.обработать(
         исходные,
@@ -247,14 +304,22 @@ export class Приложение {
     this.идётЗапись = true;
     const кнопка = mustEl('кнопка-запись', HTMLButtonElement);
     кнопка.disabled = true;
-    кнопка.textContent = 'Запись…';
-    this.статус('Идёт запись (3 секунды)…');
+    кнопка.textContent = this.фотобудка ? 'Стикер…' : 'Запись…';
+    this.статус(
+      this.фотобудка ? 'Запись стикера (2 секунды)…' : 'Идёт запись (3 секунды)…',
+    );
 
     try {
-      await this.запись.начать(this.холст, this.формат, () => this.последнийКадр);
+      await this.запись.начать(this.холст, this.формат, () => this.последнийКадр, {
+        фотобудка: this.фотобудка,
+      });
       mustEl('кнопка-скачать', HTMLButtonElement).disabled = false;
-      this.статус('Запись готова — можно скачать.');
-      показатьТост('Запись готова!', 'успех');
+      this.статус(
+        this.фотобудка
+          ? 'Стикер готов — можно скачать.'
+          : 'Запись готова — можно скачать.',
+      );
+      показатьТост(this.фотобудка ? 'Стикер готов!' : 'Запись готова!', 'успех');
     } catch (ошибка) {
       const текст =
         ошибка instanceof ОшибкаПриложения
@@ -265,18 +330,24 @@ export class Приложение {
     } finally {
       this.идётЗапись = false;
       кнопка.disabled = false;
-      кнопка.textContent = 'Записать';
+      this.обновитьКнопкуЗаписи();
     }
   }
 
   private скачать(): void {
     const blob = this.запись.результат;
     if (!blob) {
-      показатьТост('Нет готовой записи. Сначала нажмите «Записать».', 'ошибка');
+      показатьТост(
+        this.фотобудка
+          ? 'Нет стикера. Сначала нажмите «Стикер».'
+          : 'Нет готовой записи. Сначала нажмите «Записать».',
+        'ошибка',
+      );
       return;
     }
     const расширение = this.запись.формат === 'gif' ? 'gif' : 'webm';
-    const имя = `ascii-glitch-${Date.now()}.${расширение}`;
+    const префикс = this.запись.фотобудка ? 'стикер' : 'ascii-glitch';
+    const имя = `${префикс}-${Date.now()}.${расширение}`;
     try {
       скачатьBlob(blob, имя);
       показатьТост('Файл скачивается…', 'успех');
@@ -291,8 +362,9 @@ export class Приложение {
   }
 
   private нарисоватьЗаглушку(): void {
-    const w = this.холст.width || 640;
-    const h = this.холст.height || 480;
+    const сторона = this.фотобудка ? 320 : 640;
+    const w = this.фотобудка ? сторона : this.холст.width || 640;
+    const h = this.фотобудка ? сторона : this.холст.height || 480;
     this.холст.width = w;
     this.холст.height = h;
     this.ctx.fillStyle = '#050805';
@@ -300,7 +372,11 @@ export class Приложение {
     this.ctx.fillStyle = '#1aff6a';
     this.ctx.font = '600 14px "IBM Plex Mono", monospace';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Включите камеру', w / 2, h / 2);
+    this.ctx.fillText(
+      this.фотобудка ? 'Фотобудка: включите камеру' : 'Включите камеру',
+      w / 2,
+      h / 2,
+    );
   }
 }
 
